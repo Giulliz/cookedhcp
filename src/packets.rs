@@ -39,6 +39,7 @@ pub fn dhcp_from(
 ) -> [u8; SEND_DHCPPACKET_LEN] {
     let ip_yiaddr = Ipv4Addr::from_str(yiaddr).unwrap().octets();
     let ip_siaddr = Ipv4Addr::from_str(siaddr).unwrap().octets();
+    let ip_dns = env::var("IP_DNS").expect("Error parsing IP_DNS variable! Try setting it.");
 
     // reset values following
     let mut dhcp = [0; SEND_DHCPPACKET_LEN - OPTIONS];
@@ -126,6 +127,23 @@ pub fn dhcp_from(
     for i in 0..4 {
         dhcp.push(ip_siaddr[i]);
     }
+    // dns6
+    dhcp.push(6);
+    dhcp.push(4);
+    Ipv4Addr::from_octets(
+        ip_dns
+            .split('.')
+            .collect::<Vec<&str>>()
+            .iter()
+            .map(|v| u8::from_str(v).unwrap())
+            .collect::<Vec<u8>>()
+            .as_array::<4>()
+            .unwrap()
+            .to_owned(),
+    )
+    .octets()
+    .into_iter()
+    .for_each(|b| dhcp.push(b));
     // end255
     dhcp.push(255);
 

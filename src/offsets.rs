@@ -9,11 +9,20 @@ pub const RENEWAL58: usize = 4 + 2;
 pub const REBINDING59: usize = 4 + 2;
 pub const SUBNETMASK1: usize = 4 + 2;
 pub const BROADCAST28: usize = 4 + 2;
-pub const ROUTER3: usize = 4 + 2; 
-pub const END255: usize = 1; 
+pub const ROUTER3: usize = 4 + 2;
+pub const DNS6: usize = 4 + 2;
+pub const END255: usize = 1;
 
-pub const OPTIONS: usize =
-    TYPE54 + IDENT53 + LEASE51 + RENEWAL58 + REBINDING59 + SUBNETMASK1 + BROADCAST28 + ROUTER3 + END255;
+pub const OPTIONS: usize = TYPE54
+    + IDENT53
+    + LEASE51
+    + RENEWAL58
+    + REBINDING59
+    + SUBNETMASK1
+    + BROADCAST28
+    + ROUTER3
+    + DNS6
+    + END255;
 pub const SEND_DHCPPACKET_LEN: usize = 240 + OPTIONS;
 
 pub const OP_OCTET: usize = 28 - PAYLOAD_OFFSET;
