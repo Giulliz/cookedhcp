@@ -1,9 +1,9 @@
 # cookedhcp
 ## Setup
 You **need** to create a .env file in the root folder with the following variables:
-- SIADDR
-- YIADDR
-- IP_LIMITED_BROADCAST
+- SIADDR: the router's address
+- YIADDR: the client's assigned address (you choose it!)
+- IP_LIMITED_BROADCAST: the network's limited broadcast ip
 
 You _could_ also provide a custom DNS in a variable named as follows:
 - IP_DNS
