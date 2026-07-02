@@ -158,9 +158,9 @@ impl DHCPOptioner {
                 .octets()
                 .into_iter()
                 .for_each(|b| dhcp.push(b));
-            // end255
-            dhcp.push(255);
         }
+        // end255
+        dhcp.push(255);
 
         DHCPOptioner { dhcp: dhcp.clone() }
     }
