@@ -31,7 +31,7 @@ fn cook() -> std::io::Result<()> {
     {
         // Wait for a DHCPDISCOVER
         let dhcpdiscover_p = wait_for_dhcp_client(&rx)?;
-        println!("Length: {}", dhcpdiscover_p.len());
+        // println!("Length: {}", dhcpdiscover_p.len());
         // println!("{:#x?}", dhcpdiscover_p);
         // Retrieve data from DHCPDISCOVER
         let xid = <[u8; 4]>::try_from(&dhcpdiscover_p[XID_START..XID_END]).unwrap();
@@ -39,8 +39,7 @@ fn cook() -> std::io::Result<()> {
         let flags = <[u8; 2]>::try_from(&dhcpdiscover_p[FLAGS..FLAGS + 2]).unwrap();
         let giaddr = <[u8; 4]>::try_from(&dhcpdiscover_p[GIADDR_START..GIADDR_START + 4]).unwrap();
         println!("Received DHCPDISCOVER! xid: {:#x}", u32::from_be_bytes(xid));
-        println!("Byte0 xid: {:#x}", xid[0]);
-        println!("mac: {:#x?}", chaddr);
+        // println!("mac: {:#x?}", chaddr);
 
         // Send DHCPOFFER
         packets::DHCP::from(xid, &yiaddr, &siaddr, chaddr, giaddr, flags)
@@ -67,7 +66,7 @@ fn cook() -> std::io::Result<()> {
             .generate_and_send(&tx)?;
     }
 
-    println!("Acknowledged!");
+    println!("Acknowledged! Success.");
 
     Ok(())
 }
