@@ -162,8 +162,6 @@ impl DHCPOptioner {
             dhcp.push(255);
         }
 
-        // println!("Length: {}", dhcp.len());
-
         DHCPOptioner { dhcp: dhcp.clone() }
     }
 

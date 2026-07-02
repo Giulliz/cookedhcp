@@ -4,9 +4,9 @@ You **need** to create a .env file in the root folder with the following variabl
 - SIADDR: the router's address
 - YIADDR: the client's assigned address (you choose it!)
 - IP_LIMITED_BROADCAST: the network's limited broadcast ip
+- IP_DNS: it is what you think it is
 
-You _could_ also provide a custom DNS in a variable named as follows:
-- IP_DNS
+If you don't want to manually specify a DNS you could set it to "NO" and it will be ignored.
 
 For example:
 ```
