@@ -4,13 +4,13 @@ You **need** to create a .env file in the root folder with the following variabl
 - SIADDR: the router's address
 - YIADDR: the client's assigned address (you choose it!)
 - IP_LIMITED_BROADCAST: the network's limited broadcast ip
-- IP_DNS: it is what you think it is
 
-If you don't want to manually specify a DNS you could set it to "NO" and it will be ignored.
+If you wish, you _could_ also set a custom DNS by creating a variable named IP_DNS. 
+If you don't, Cloudflare DNS will be set instead.
 
-For example:
+A valid sample config:
 ```
-IP_DNS="1.1.1.1"
+IP_DNS="8.8.8.8"
 SIADDR="192.168.1.1"
 YIADDR="192.168.1.100"
 IP_LIMITED_BROADCAST="192.168.1.255"

@@ -19,11 +19,12 @@ fn cook() -> std::io::Result<()> {
     let rx = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 67))?;
     let tx = UdpSocket::bind((Ipv4Addr::UNSPECIFIED, 68))?;
 
-    tx.set_broadcast(true).unwrap();
+    tx.set_broadcast(true)?;
 
-    let siaddr: String = dotenvy::var("SIADDR").unwrap();
-    let yiaddr: String = dotenvy::var("YIADDR").unwrap();
-    let limited_broadcast: String = dotenvy::var("IP_LIMITED_BROADCAST").unwrap();
+    let siaddr: String = dotenvy::var("SIADDR").expect("Unset SIADDR variable");
+    let yiaddr: String = dotenvy::var("YIADDR").expect("Unset YIADDR variable");
+    let limited_broadcast: String =
+        dotenvy::var("IP_LIMITED_BROADCAST").expect("Unset IP_LIMITED_BROADCAST variable");
 
     {
         // Wait for a DHCPDISCOVER
@@ -36,10 +37,17 @@ fn cook() -> std::io::Result<()> {
         println!("Received DHCPDISCOVER! xid: {:#x}", u32::from_be_bytes(xid));
 
         // Send DHCPOFFER
-        packets::DHCP::from(xid, &yiaddr, &siaddr, chaddr, giaddr, flags)
-            .set_type(packets::DHCPOFFER)
-            .set_default_options(&siaddr, &limited_broadcast)
-            .generate_and_send(&tx)?;
+        packets::DHCP::from(
+            xid,
+            &yiaddr,
+            &siaddr,
+            chaddr,
+            giaddr,
+            flags,
+            packets::DHCPOFFER,
+        )
+        .set_default_options(&siaddr, &limited_broadcast)
+        .generate_and_send(&tx)?;
     }
 
     {
@@ -54,10 +62,17 @@ fn cook() -> std::io::Result<()> {
         println!("Received DHCPREQUEST! xid: {:#x}", u32::from_be_bytes(xid));
 
         // Send DHCPACK
-        packets::DHCP::from(xid, &yiaddr, &siaddr, chaddr, giaddr, flags)
-            .set_type(packets::DHCPACK)
-            .set_default_options(&siaddr, &limited_broadcast)
-            .generate_and_send(&tx)?;
+        packets::DHCP::from(
+            xid,
+            &yiaddr,
+            &siaddr,
+            chaddr,
+            giaddr,
+            flags,
+            packets::DHCPACK,
+        )
+        .set_default_options(&siaddr, &limited_broadcast)
+        .generate_and_send(&tx)?;
     }
 
     println!("Acknowledged! Success.");

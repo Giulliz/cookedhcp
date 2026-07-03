@@ -8,11 +8,9 @@ use std::{
 pub const DHCPOFFER: u8 = 2;
 pub const DHCPACK: u8 = 5;
 pub const DHCPNAK: u8 = 6;
+pub const DEFAULT_DNS: &str = "1.1.1.1";
 
 pub struct DHCP {}
-pub struct DHCPTyper {
-    dhcp: Vec<u8>,
-}
 pub struct DHCPOptioner {
     dhcp: Vec<u8>,
 }
@@ -25,9 +23,14 @@ impl DHCP {
         chaddr: [u8; 16],
         giaddr: [u8; 4],
         flags: [u8; 2],
-    ) -> DHCPTyper {
-        let ip_yiaddr = Ipv4Addr::from_str(yiaddr).unwrap().octets();
-        let ip_siaddr = Ipv4Addr::from_str(siaddr).unwrap().octets();
+        dhcp_type: u8,
+    ) -> DHCPOptioner {
+        let ip_yiaddr = Ipv4Addr::from_str(yiaddr)
+            .expect("Malformed YIADDR")
+            .octets();
+        let ip_siaddr = Ipv4Addr::from_str(siaddr)
+            .expect("Malformed SIADDR")
+            .octets();
 
         let mut dhcp = [0; SEND_DHCPPACKET_LEN - OPTIONS];
         dhcp[OP_OCTET] = 2;
@@ -62,110 +65,101 @@ impl DHCP {
             dhcp[MAGIC_COOKIE + i] = magic_cookie[i];
         }
 
-        DHCPTyper {
-            dhcp: dhcp.to_vec(),
-        }
-    }
-}
+        let mut dhcp = dhcp.to_vec();
+        // set type; ident53
+        dhcp.push(53);
+        dhcp.push(1);
+        dhcp.push(dhcp_type);
 
-impl DHCPTyper {
-    pub fn set_type(&mut self, dhcp_type: u8) -> DHCPOptioner {
-        // ident53
-        self.dhcp.push(53);
-        self.dhcp.push(1);
-        self.dhcp.push(dhcp_type);
-
-        DHCPOptioner {
-            dhcp: self.dhcp.clone(),
-        }
+        DHCPOptioner { dhcp: dhcp }
     }
 }
 
 impl DHCPOptioner {
-    pub fn add_option(&mut self, option_number: u8, len: u8, data: Vec<u8>) -> DHCPOptioner {
+    pub fn add_option(mut self, option_number: u8, len: u8, data: Vec<u8>) -> DHCPOptioner {
         self.dhcp.push(option_number);
         self.dhcp.push(len);
         data.into_iter().for_each(|b| self.dhcp.push(b));
 
-        DHCPOptioner {
-            dhcp: self.dhcp.clone(),
-        }
+        DHCPOptioner { dhcp: self.dhcp }
     }
 
     pub fn set_default_options(
-        &mut self,
+        mut self,
         siaddr: &String,
         limited_broadcast_ip: &String,
     ) -> DHCPOptioner {
-        let dhcp = &mut self.dhcp;
-        let ip_siaddr = Ipv4Addr::from_str(siaddr).unwrap().octets();
-        let ip_dns = dotenvy::var("IP_DNS").expect(
-            "IP_DNS variable not found. 
-        Make sure to set it in a .env file in the root project directory.",
-        );
+        let ip_siaddr = Ipv4Addr::from_str(siaddr)
+            .expect("Malformed SIADDR")
+            .octets();
+        let ip_dns = dotenvy::var("IP_DNS").ok();
 
         // type 54
-        dhcp.push(54);
-        dhcp.push(4);
+        self.dhcp.push(54);
+        self.dhcp.push(4);
         for i in 0..4 {
-            dhcp.push(ip_siaddr[i]);
+            self.dhcp.push(ip_siaddr[i]);
         }
         // lease51
-        dhcp.push(51);
-        dhcp.push(4);
+        self.dhcp.push(51);
+        self.dhcp.push(4);
         u32::to_be_bytes(3600)
             .into_iter()
-            .for_each(|b| dhcp.push(b));
+            .for_each(|b| self.dhcp.push(b));
         // renewal58
-        dhcp.push(58);
-        dhcp.push(4);
+        self.dhcp.push(58);
+        self.dhcp.push(4);
         u32::to_be_bytes(1800)
             .into_iter()
-            .for_each(|b| dhcp.push(b));
+            .for_each(|b| self.dhcp.push(b));
         // rebind59
-        dhcp.push(59);
-        dhcp.push(4);
+        self.dhcp.push(59);
+        self.dhcp.push(4);
         u32::to_be_bytes(3150)
             .into_iter()
-            .for_each(|b| dhcp.push(b));
+            .for_each(|b| self.dhcp.push(b));
         // subnetmask1
-        dhcp.push(1);
-        dhcp.push(4);
+        self.dhcp.push(1);
+        self.dhcp.push(4);
         for _ in 0..3 {
-            dhcp.push(255);
+            self.dhcp.push(255);
         }
-        dhcp.push(0);
+        self.dhcp.push(0);
         // broadcast28
-        dhcp.push(28);
-        dhcp.push(4);
+        self.dhcp.push(28);
+        self.dhcp.push(4);
         Ipv4Addr::from_str(limited_broadcast_ip)
             .unwrap()
             .octets()
             .into_iter()
-            .for_each(|b| dhcp.push(b));
+            .for_each(|b| self.dhcp.push(b));
         // router3
-        dhcp.push(3);
-        dhcp.push(4);
+        self.dhcp.push(3);
+        self.dhcp.push(4);
         for i in 0..4 {
-            dhcp.push(ip_siaddr[i]);
+            self.dhcp.push(ip_siaddr[i]);
         }
         // dns6
-        if ip_dns != "NO" {
-            dhcp.push(6);
-            dhcp.push(4);
-            Ipv4Addr::from_str(&ip_dns)
-                .unwrap()
-                .octets()
-                .into_iter()
-                .for_each(|b| dhcp.push(b));
-        }
-        // end255
-        dhcp.push(255);
+        self.dhcp.push(6);
+        self.dhcp.push(4);
+        let ip_dns = match ip_dns {
+            Some(ip) => ip,
+            None => String::from(DEFAULT_DNS),
+        };
+        Ipv4Addr::from_str(&ip_dns)
+            .unwrap()
+            .octets()
+            .into_iter()
+            .for_each(|b| self.dhcp.push(b));
 
-        DHCPOptioner { dhcp: dhcp.clone() }
+        // end255
+        self.dhcp.push(255);
+
+        DHCPOptioner { dhcp: self.dhcp }
     }
 
-    pub fn generate_and_send(&self, tx: &UdpSocket) -> io::Result<usize> {
-        tx.send_to(self.dhcp.clone().as_slice(), "255.255.255.255:68")
+    // caller must allow broadcast to the tx socket
+    pub fn generate_and_send(self, tx: &UdpSocket) -> io::Result<usize> {
+        tx.send_to(self.dhcp.as_slice(), "255.255.255.255:68")
     }
 }
