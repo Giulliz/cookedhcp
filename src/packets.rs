@@ -10,8 +10,7 @@ pub const DHCPACK: u8 = 5;
 pub const DHCPNAK: u8 = 6;
 pub const DEFAULT_DNS: &str = "1.1.1.1";
 
-pub struct DHCP {}
-pub struct DHCPOptioner {
+pub struct DHCP {
     dhcp: Vec<u8>,
 }
 
@@ -24,7 +23,7 @@ impl DHCP {
         giaddr: [u8; 4],
         flags: [u8; 2],
         dhcp_type: u8,
-    ) -> DHCPOptioner {
+    ) -> DHCP {
         let ip_yiaddr = Ipv4Addr::from_str(yiaddr)
             .expect("Malformed YIADDR")
             .octets();
@@ -71,24 +70,18 @@ impl DHCP {
         dhcp.push(1);
         dhcp.push(dhcp_type);
 
-        DHCPOptioner { dhcp: dhcp }
+        DHCP { dhcp }
     }
-}
 
-impl DHCPOptioner {
-    pub fn add_option(mut self, option_number: u8, len: u8, data: Vec<u8>) -> DHCPOptioner {
+    pub fn add_option(mut self, option_number: u8, len: u8, data: Vec<u8>) -> DHCP {
         self.dhcp.push(option_number);
         self.dhcp.push(len);
         data.into_iter().for_each(|b| self.dhcp.push(b));
 
-        DHCPOptioner { dhcp: self.dhcp }
+        DHCP { dhcp: self.dhcp }
     }
 
-    pub fn set_default_options(
-        mut self,
-        siaddr: &String,
-        limited_broadcast_ip: &String,
-    ) -> DHCPOptioner {
+    pub fn set_default_options(mut self, siaddr: &String, limited_broadcast_ip: &String) -> DHCP {
         let ip_siaddr = Ipv4Addr::from_str(siaddr)
             .expect("Malformed SIADDR")
             .octets();
@@ -155,7 +148,7 @@ impl DHCPOptioner {
         // end255
         self.dhcp.push(255);
 
-        DHCPOptioner { dhcp: self.dhcp }
+        DHCP { dhcp: self.dhcp }
     }
 
     // caller must allow broadcast to the tx socket
