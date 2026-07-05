@@ -28,6 +28,7 @@ fn cook() -> std::io::Result<()> {
 
     {
         // Wait for a DHCPDISCOVER
+        println!("Waiting for DHCPDISCOVER");
         let dhcpdiscover_p = wait_for_dhcp_client(&rx)?;
         // Retrieve data from DHCPDISCOVER
         let xid = <[u8; 4]>::try_from(&dhcpdiscover_p[XID_START..XID_END]).unwrap();
@@ -51,8 +52,8 @@ fn cook() -> std::io::Result<()> {
     }
 
     {
-        println!("Waiting for DHCPREQUEST");
         // Wait for a DHCPREQUEST
+        println!("Waiting for DHCPREQUEST");
         let dhcprequest_p = wait_for_dhcp_client(&rx)?;
         // Retrieve data from DHCPREQUEST
         let xid = <[u8; 4]>::try_from(&dhcprequest_p[XID_START..XID_END]).unwrap();

@@ -5,11 +5,20 @@ use std::{
     str::FromStr,
 };
 
+const DEFAULT_DNS: &str = "1.1.1.1";
+
+const DHCP_MAGIC: u32 = 0x63825363;
 const DHCPOFFER: u8 = 2;
 const DHCPACK: u8 = 5;
 const DHCPNAK: u8 = 6;
-const DHCP_MAGIC: u32 = 0x63825363;
-const DEFAULT_DNS: &str = "1.1.1.1";
+const OPT_SERVER_IDENTIFIER: u8 = 54;
+const OPT_LEASE_TIME: u8 = 51;
+const OPT_RENEWAL_TIME: u8 = 58;
+const OPT_REBINDING_TIME: u8 = 59;
+const OPT_SUBNET_MASK: u8 = 1;
+const OPT_BROADCAST_IP: u8 = 28;
+const OPT_ROUTER_IP: u8 = 3;
+const OPT_DNS_IP: u8 = 6;
 
 pub enum DHCPType {
     DHCPOffer,
@@ -53,13 +62,9 @@ impl DHCP {
         dhcp[HTYPE_OCTET] = 1;
         dhcp[HLEN_OCTET] = 6;
         dhcp[HOPS_OCTET] = 0;
-        for (i, &byte) in xid.iter().enumerate() {
-            dhcp[XID_START + i] = byte;
-        }
-        dhcp[SECS] = 0;
-        dhcp[SECS + 1] = 0;
-        dhcp[FLAGS] = flags[0];
-        dhcp[FLAGS + 1] = flags[1];
+        dhcp[XID_START..(4 + XID_START)].clone_from_slice(&xid[..]);
+        dhcp[SECS..(2 + SECS)].clone_from_slice(&[0; 2]);
+        dhcp[FLAGS..(2 + FLAGS)].clone_from_slice(&flags[..]);
         dhcp[CIADDR_START..(4 + CIADDR_START)].clone_from_slice(&[0; 4]);
         dhcp[YIADDR_START..(4 + YIADDR_START)].clone_from_slice(&ip_yiaddr[..]);
         dhcp[SIADDR_START..(4 + SIADDR_START)].clone_from_slice(&ip_siaddr[..]);
@@ -99,22 +104,17 @@ impl DHCP {
             Some(ip) => ip,
             None => String::from(DEFAULT_DNS),
         };
+        let ip_dns = Ipv4Addr::from_str(&ip_dns).unwrap().octets();
+        let broadcast_ip = Ipv4Addr::from_str(limited_broadcast_ip).unwrap().octets();
 
-        self.add_option(54, 4, ip_siaddr.to_vec())
-            .add_option(51, 4, u32::to_be_bytes(3600).to_vec())
-            .add_option(58, 4, u32::to_be_bytes(1800).to_vec())
-            .add_option(59, 4, u32::to_be_bytes(3150).to_vec())
-            .add_option(1, 4, vec![255, 255, 255, 0])
-            .add_option(
-                28,
-                4,
-                Ipv4Addr::from_str(limited_broadcast_ip)
-                    .unwrap()
-                    .octets()
-                    .to_vec(),
-            )
-            .add_option(3, 4, ip_siaddr.to_vec())
-            .add_option(6, 4, Ipv4Addr::from_str(&ip_dns).unwrap().octets().to_vec())
+        self.add_option(OPT_SERVER_IDENTIFIER, 4, ip_siaddr.to_vec())
+            .add_option(OPT_LEASE_TIME, 4, u32::to_be_bytes(3600).to_vec())
+            .add_option(OPT_RENEWAL_TIME, 4, u32::to_be_bytes(1800).to_vec())
+            .add_option(OPT_REBINDING_TIME, 4, u32::to_be_bytes(3150).to_vec())
+            .add_option(OPT_SUBNET_MASK, 4, vec![255, 255, 255, 0])
+            .add_option(OPT_BROADCAST_IP, 4, broadcast_ip.to_vec())
+            .add_option(OPT_ROUTER_IP, 4, ip_siaddr.to_vec())
+            .add_option(OPT_DNS_IP, 4, ip_dns.to_vec())
     }
 
     // caller must allow broadcast to the tx socket
