@@ -1,6 +1,6 @@
 pub mod offsets;
 pub mod packets;
-use crate::offsets::*;
+use crate::{offsets::*, packets::DHCPType};
 use std::net::{Ipv4Addr, UdpSocket};
 
 fn wait_for_dhcp_client(rx: &UdpSocket) -> std::io::Result<[u8; MAX_DHCPPACKET_LEN]> {
@@ -44,7 +44,7 @@ fn cook() -> std::io::Result<()> {
             chaddr,
             giaddr,
             flags,
-            packets::DHCPOFFER,
+            DHCPType::DHCPOffer,
         )
         .set_default_options(&siaddr, &limited_broadcast)
         .generate_and_send(&tx)?;
@@ -69,7 +69,7 @@ fn cook() -> std::io::Result<()> {
             chaddr,
             giaddr,
             flags,
-            packets::DHCPACK,
+            DHCPType::DHCPAck,
         )
         .set_default_options(&siaddr, &limited_broadcast)
         .generate_and_send(&tx)?;

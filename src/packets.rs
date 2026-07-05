@@ -5,10 +5,26 @@ use std::{
     str::FromStr,
 };
 
-pub const DHCPOFFER: u8 = 2;
-pub const DHCPACK: u8 = 5;
-pub const DHCPNAK: u8 = 6;
-pub const DEFAULT_DNS: &str = "1.1.1.1";
+const DHCPOFFER: u8 = 2;
+const DHCPACK: u8 = 5;
+const DHCPNAK: u8 = 6;
+const DEFAULT_DNS: &str = "1.1.1.1";
+
+pub enum DHCPType {
+    DHCPOffer,
+    DHCPAck,
+    DHCPNak,
+}
+
+impl DHCPType {
+    fn number(self) -> u8 {
+        match self {
+            DHCPType::DHCPOffer => DHCPOFFER,
+            DHCPType::DHCPAck => DHCPACK,
+            DHCPType::DHCPNak => DHCPNAK,
+        }
+    }
+}
 
 pub struct DHCP {
     dhcp: Vec<u8>,
@@ -22,7 +38,7 @@ impl DHCP {
         chaddr: [u8; 16],
         giaddr: [u8; 4],
         flags: [u8; 2],
-        dhcp_type: u8,
+        dhcp_type: DHCPType,
     ) -> DHCP {
         let ip_yiaddr = Ipv4Addr::from_str(yiaddr)
             .expect("Malformed YIADDR")
@@ -68,7 +84,7 @@ impl DHCP {
         // set type; ident53
         dhcp.push(53);
         dhcp.push(1);
-        dhcp.push(dhcp_type);
+        dhcp.push(dhcp_type.number());
 
         DHCP { dhcp }
     }
