@@ -86,78 +86,41 @@ impl DHCP {
         DHCP { dhcp: self.dhcp }
     }
 
-    pub fn set_default_options(mut self, siaddr: &String, limited_broadcast_ip: &String) -> DHCP {
-        let ip_siaddr = Ipv4Addr::from_str(siaddr)
-            .expect("Malformed SIADDR")
-            .octets();
-        let ip_dns = dotenvy::var("IP_DNS").ok();
-
-        // type 54
-        self.dhcp.push(54);
-        self.dhcp.push(4);
-        for i in 0..4 {
-            self.dhcp.push(ip_siaddr[i]);
-        }
-        // lease51
-        self.dhcp.push(51);
-        self.dhcp.push(4);
-        u32::to_be_bytes(3600)
-            .into_iter()
-            .for_each(|b| self.dhcp.push(b));
-        // renewal58
-        self.dhcp.push(58);
-        self.dhcp.push(4);
-        u32::to_be_bytes(1800)
-            .into_iter()
-            .for_each(|b| self.dhcp.push(b));
-        // rebind59
-        self.dhcp.push(59);
-        self.dhcp.push(4);
-        u32::to_be_bytes(3150)
-            .into_iter()
-            .for_each(|b| self.dhcp.push(b));
-        // subnetmask1
-        self.dhcp.push(1);
-        self.dhcp.push(4);
-        for _ in 0..3 {
-            self.dhcp.push(255);
-        }
-        self.dhcp.push(0);
-        // broadcast28
-        self.dhcp.push(28);
-        self.dhcp.push(4);
-        Ipv4Addr::from_str(limited_broadcast_ip)
-            .unwrap()
-            .octets()
-            .into_iter()
-            .for_each(|b| self.dhcp.push(b));
-        // router3
-        self.dhcp.push(3);
-        self.dhcp.push(4);
-        for i in 0..4 {
-            self.dhcp.push(ip_siaddr[i]);
-        }
-        // dns6
-        self.dhcp.push(6);
-        self.dhcp.push(4);
-        let ip_dns = match ip_dns {
-            Some(ip) => ip,
-            None => String::from(DEFAULT_DNS),
-        };
-        Ipv4Addr::from_str(&ip_dns)
-            .unwrap()
-            .octets()
-            .into_iter()
-            .for_each(|b| self.dhcp.push(b));
-
-        // end255
+    fn terminate(mut self) -> DHCP {
         self.dhcp.push(255);
-
         DHCP { dhcp: self.dhcp }
     }
 
+    pub fn set_default_options(self, siaddr: &String, limited_broadcast_ip: &String) -> DHCP {
+        let ip_siaddr = Ipv4Addr::from_str(siaddr)
+            .expect("Malformed SIADDR")
+            .octets();
+        let ip_dns = match dotenvy::var("IP_DNS").ok() {
+            Some(ip) => ip,
+            None => String::from(DEFAULT_DNS),
+        };
+
+        self.add_option(54, 4, ip_siaddr.to_vec())
+            .add_option(51, 4, u32::to_be_bytes(3600).to_vec())
+            .add_option(58, 4, u32::to_be_bytes(1800).to_vec())
+            .add_option(59, 4, u32::to_be_bytes(3150).to_vec())
+            .add_option(1, 4, vec![255, 255, 255, 0])
+            .add_option(
+                28,
+                4,
+                Ipv4Addr::from_str(limited_broadcast_ip)
+                    .unwrap()
+                    .octets()
+                    .to_vec(),
+            )
+            .add_option(3, 4, ip_siaddr.to_vec())
+            .add_option(6, 4, Ipv4Addr::from_str(&ip_dns).unwrap().octets().to_vec())
+    }
+
     // caller must allow broadcast to the tx socket
+    // caller must ensure the packet is not already terminated (option 255)
     pub fn generate_and_send(self, tx: &UdpSocket) -> io::Result<usize> {
-        tx.send_to(self.dhcp.as_slice(), "255.255.255.255:68")
+        // Sets option 255 and sends packet in broadcast
+        tx.send_to(self.terminate().dhcp.as_slice(), "255.255.255.255:68")
     }
 }
