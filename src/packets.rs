@@ -8,6 +8,7 @@ use std::{
 const DHCPOFFER: u8 = 2;
 const DHCPACK: u8 = 5;
 const DHCPNAK: u8 = 6;
+const DHCP_MAGIC: u32 = 0x63825363;
 const DEFAULT_DNS: &str = "1.1.1.1";
 
 pub enum DHCPType {
@@ -59,26 +60,14 @@ impl DHCP {
         dhcp[SECS + 1] = 0;
         dhcp[FLAGS] = flags[0];
         dhcp[FLAGS + 1] = flags[1];
-        for i in 0..4 {
-            dhcp[CIADDR_START + i] = 0;
-        }
-        for i in 0..4 {
-            dhcp[YIADDR_START + i] = ip_yiaddr[i];
-        }
-        for i in 0..4 {
-            dhcp[SIADDR_START + i] = ip_siaddr[i];
-        }
-        for i in 0..4 {
-            dhcp[GIADDR_START + i] = giaddr[i];
-        }
-        for i in 0..16 {
-            dhcp[CH_MAC_START + i] = chaddr[i];
-        }
+        dhcp[CIADDR_START..(4 + CIADDR_START)].clone_from_slice(&[0; 4]);
+        dhcp[YIADDR_START..(4 + YIADDR_START)].clone_from_slice(&ip_yiaddr[..]);
+        dhcp[SIADDR_START..(4 + SIADDR_START)].clone_from_slice(&ip_siaddr[..]);
+        dhcp[GIADDR_START..(4 + GIADDR_START)].clone_from_slice(&giaddr[..]);
+        dhcp[CH_MAC_START..(16 + CH_MAC_START)].clone_from_slice(&chaddr[..]);
         // Zeroed options already set
-        let magic_cookie = u32::to_be_bytes(0x63825363);
-        for i in 0..4 {
-            dhcp[MAGIC_COOKIE + i] = magic_cookie[i];
-        }
+        let magic_cookie = u32::to_be_bytes(DHCP_MAGIC);
+        dhcp[MAGIC_COOKIE..(4 + MAGIC_COOKIE)].clone_from_slice(&magic_cookie[..]);
 
         let mut dhcp = dhcp.to_vec();
         // set type; ident53
